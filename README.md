@@ -1,2 +1,2 @@
 # PDFU-CPP
-Port de la librería PDF Unembedder en C++.
+Port de la librería PDFU (PDF Unembedder) en C++.

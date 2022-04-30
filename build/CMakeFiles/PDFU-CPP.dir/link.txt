@@ -1,1 +1,0 @@
-/usr/bin/g++ -g -rdynamic "CMakeFiles/PDFU-CPP.dir/main.cpp.o" -o PDFU-CPP  /lib/libpodofo.so 

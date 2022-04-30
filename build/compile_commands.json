@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/yomismo/Projects/PDFU-CPP/build",
+  "command": "/usr/bin/g++   -g -o CMakeFiles/PDFU-CPP.dir/main.cpp.o -c /home/yomismo/Projects/PDFU-CPP/main.cpp",
+  "file": "/home/yomismo/Projects/PDFU-CPP/main.cpp"
+}
+]

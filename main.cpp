@@ -91,7 +91,7 @@ int main( int argc, char* argv[] ) {
     try {
          auto start = std::chrono::high_resolution_clock::now();
          //Por alguna razón si el archivo es muy grande, falla
-         if (deembed("/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/BMPITemario.pdf","/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/write.pdf")==0){
+         if (deembed("/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/alexromeral_Bloque_2.pdf","/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/write.pdf")==0){
            std::cout << "Limpiado correctamente" << std::endl;
          }else{
            std::cout << "No se han encontrado páginas insertadas" << std::endl;

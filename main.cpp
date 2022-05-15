@@ -2,6 +2,7 @@
 #include <string>
 #include <podofo/podofo.h>
 #include <cstdlib>
+#include <bits/stdc++.h>
 
 using namespace PoDoFo;
 
@@ -29,11 +30,11 @@ int cleanpage(PdfPage* page,PdfMemDocument* document){
               PdfObject* resources = targetDict.GetKey("Resources");
               PdfObject* newresources = newpage->GetResources();
 
-              newresources->GetDictionary().AddKey("ExtGState",resources->GetDictionary().GetKey("ExtGState"));
-              newresources->GetDictionary().AddKey("Font",resources->GetDictionary().GetKey("Font"));
-              newresources->GetDictionary().AddKey("ProcSet",resources->GetDictionary().GetKey("ProcSet"));
-              newresources->GetDictionary().AddKey("XObject",resources->GetDictionary().GetKey("XObject"));
-              
+              auto resource_keys = resources->GetDictionary().GetKeys();
+              for (TCIKeyMap key = resource_keys.begin();key!=resource_keys.end();++key)
+              {
+                newresources->GetDictionary().AddKey(key->first.GetEscapedName(),resources->GetDictionary().GetKey(key->first.GetEscapedName()));
+              }
 
               //gcont es el diccionario donde meteremos las keys Lenght y Filter
               PdfContents* contents = new PdfContents(newpage);
@@ -42,10 +43,10 @@ int cleanpage(PdfPage* page,PdfMemDocument* document){
               PdfObject* filter = targetDict.GetKey("Filter");
               gcont->GetDictionary().AddKey("Length",length);
               gcont->GetDictionary().AddKey("Filter",filter);
-              std::cout << "Stream length: " << length->GetNumber() << std::endl;
+              //std::cout << "Stream length: " << length->GetNumber() << std::endl;
               
               //Copiamos el stream a un buffer, habrá que optimizar el número
-              int buffersize = 1000000;
+              int buffersize = 20000;
               pdf_long len = buffersize;
               char* buffer = (char*)malloc(buffersize);
               target->GetStream()->GetFilteredCopy(&buffer,&len);
@@ -71,8 +72,9 @@ int deembed( const char* openFilename ,const char* saveFilename) {
     PdfMemDocument document( openFilename );
     
     int total_pages = document.GetPageCount();
+    std::cout << "Old pages: " << total_pages << std::endl;
     int newpage_number = 0;
-    for (int i=0;i<total_pages;i++){
+    for (int i;i<total_pages;i++){
       newpage_number = newpage_number + cleanpage(document.GetPage(i),&document);
     }
     std::cout << "New pages: " << newpage_number << std::endl;
@@ -87,11 +89,17 @@ int deembed( const char* openFilename ,const char* saveFilename) {
 
 int main( int argc, char* argv[] ) {
     try {
-         if (deembed("/home/yomismo/Projects/PDFU-CPP/tests/testpdf/test.pdf","/home/yomismo/Projects/PDFU-CPP/tests/testpdf/write.pdf")==0){
+         auto start = std::chrono::high_resolution_clock::now();
+         //Por alguna razón si el archivo es muy grande, falla
+         if (deembed("/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/BMPITemario.pdf","/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/write.pdf")==0){
            std::cout << "Limpiado correctamente" << std::endl;
          }else{
            std::cout << "No se han encontrado páginas insertadas" << std::endl;
          };
+         auto stop = std::chrono::high_resolution_clock::now();
+         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+         double display= (double)duration.count()/(double)1000;
+         std::cout << "Time taken: " << display << " ms" << std::endl;
     } catch( const PdfError & eCode ) {
         eCode.PrintErrorMsg();
         return eCode.GetError();

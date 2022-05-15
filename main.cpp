@@ -5,127 +5,93 @@
 
 using namespace PoDoFo;
 
-void deembed( const char* openFilename ,const char* saveFilename) {
-    /* pdzFilename es el archivo que se va a abrir*/
-    PdfMemDocument document( openFilename );
-    // Hay que hacer un loop que pase por todas las páginas del documento
-    PdfPage* page = document.GetPage(1);
-    PdfPage* newpage;
-    PdfDictionary resource = page->GetResources()->GetDictionary();
-    
-    auto objvec = document.GetObjects();
-    
-    
-              
-    //PdfPainter painter;
-    //painter.SetPage(newpage);
-    newpage =document.CreatePage( PdfPage::CreateStandardPageSize( ePdfPageSize_A4 ) );
-    
-    for (auto& k : resource.GetKeys()) {
-    if (k.first.GetName() == "XObject") {
-      if (k.second->IsDictionary()) {
-        auto targetDict = k.second->GetDictionary();
-        for (auto& r : k.second->GetDictionary().GetKeys()) {
+int cleanpage(PdfPage* page,PdfMemDocument* document){
+//Cleans the page and adds it to the end of the document.
+  PdfDictionary resource = page->GetResources()->GetDictionary();
+  
+  for (auto& resourcekeys : resource.GetKeys()) {
+    if (resourcekeys.first.GetName() == "XObject") {
+      if (resourcekeys.second->IsDictionary()) {
+        PdfDictionary targetDict = resourcekeys.second->GetDictionary();
+        for (auto& r : resourcekeys.second->GetDictionary().GetKeys()) {
           if (r.first.GetEscapedName().find("EmbeddedPdfPage",0)==0){
             if (r.second->IsReference()){
-              auto target = document.GetObjects().GetObject(r.second->GetReference());
-             
-              //Del targetDict sacaremos las keys para introducirlas en la pagina
-              //BBox que se convertirá en MediaBox
-              //Resources que también será Resources
-              //Lenght y Filter también salen de aquí
-              auto targetDict = target->GetDictionary();
-              auto targetstream = target->GetStream();
-              auto contents = new PdfContents(newpage);
               
+              //Si tenemos una embeddedpdfpage, creamos la página nueva para añadir
+              PdfObject* target = document->GetObjects().GetObject(r.second->GetReference());
+              PdfPage* newpage = document->CreatePage( PdfPage::CreateStandardPageSize( ePdfPageSize_A4 ) );
+  
+              PdfDictionary targetDict = target->GetDictionary();
               //A pageDictionary metemos BBox como MediaBox y Resources
-              auto pageDictionary = newpage->GetObject()->GetDictionary();
-              auto bbox = targetDict.GetKey("BBox");
-              auto resources = targetDict.GetKey("Resources");
-              pageDictionary.AddKey("MediaBox",bbox);
-              //PUEDE QUE ESTÉ AQUÍ EL ERROR, NO SE SI LOS ESTOY METIENDO BIEN!!!!!
-              //pageDictionary.AddKey("Resources",resources);
-              auto newresources = newpage->GetResources();
-              std::cout << "Newresources: "<< newresources->GetDataTypeString() << std::endl;
               
-              auto resources_keys = resources->GetDictionary().GetKeys();
-              
-              newresources->GetDictionary().RemoveKey("ProcSet");
-              
-              for (TCIKeyMap key = resources_keys.begin();key!=resources_keys.end();++key)
-              {
-                std::cout << key->first.GetEscapedName() << ": ";
-                std::cout << key->second->GetDataTypeString() << std::endl;
-                //newresources->GetDictionary().AddKey(key->first.GetEscapedName(),key->second);
-              }
+              newpage->GetObject()->GetDictionary().AddKey("MediaBox",targetDict.GetKey("BBox"));
+
+              PdfObject* resources = targetDict.GetKey("Resources");
+              PdfObject* newresources = newpage->GetResources();
+
               newresources->GetDictionary().AddKey("ExtGState",resources->GetDictionary().GetKey("ExtGState"));
               newresources->GetDictionary().AddKey("Font",resources->GetDictionary().GetKey("Font"));
-              auto fontobj = resources->GetDictionary().GetKey("Font");
               newresources->GetDictionary().AddKey("ProcSet",resources->GetDictionary().GetKey("ProcSet"));
               newresources->GetDictionary().AddKey("XObject",resources->GetDictionary().GetKey("XObject"));
               
-              auto r10 = document.GetObjects().GetObject(fontobj->GetDictionary().GetKey("R10")->GetReference());
-              auto r8 = document.GetObjects().GetObject(fontobj->GetDictionary().GetKey("R8")->GetReference());
-              fontobj->GetDictionary().AddKey("R10",r10);
-              fontobj->GetDictionary().AddKey("R8",r8);
 
               //gcont es el diccionario donde meteremos las keys Lenght y Filter
-              auto gcont = contents->GetContents();
-              auto length = targetDict.GetKey("Length");
-              std::cout << "Lenght: " << length->GetNumber() << std::endl;
-              auto filter = targetDict.GetKey("Filter");
+              PdfContents* contents = new PdfContents(newpage);
+              PdfObject* gcont = contents->GetContents();
+              PdfObject* length = targetDict.GetKey("Length");
+              PdfObject* filter = targetDict.GetKey("Filter");
               gcont->GetDictionary().AddKey("Length",length);
               gcont->GetDictionary().AddKey("Filter",filter);
-
-              //A gstream metemos targetstream
+              std::cout << "Stream length: " << length->GetNumber() << std::endl;
               
-            char* buffer = (char*)malloc(100000);
-              pdf_long len = 100000;
-              targetstream->GetFilteredCopy(&buffer,&len);
-              //std::cout << buffer << std::endl;
-
-
-
-
-              auto gstream = gcont->GetStream();
-              //Con este bloque añadimos lo que queramos a gstream
-              auto filters = PdfFilterFactory::CreateFilterList(filter);
+              //Copiamos el stream a un buffer, habrá que optimizar el número
+              int buffersize = 1000000;
+              pdf_long len = buffersize;
+              char* buffer = (char*)malloc(buffersize);
+              target->GetStream()->GetFilteredCopy(&buffer,&len);
+              
+              //Añadimos el buffer a gstream
+              PdfStream* gstream = gcont->GetStream();
+              TVecFilters filters = PdfFilterFactory::CreateFilterList(filter);
               gstream->BeginAppend(filters);
               gstream->Append(buffer,len);
               gstream->EndAppend();
               
-              //Ver la longitud del stream. Debugging.
-              std::cout << gcont->GetStream()->GetLength() << std::endl;
-              //auto pagecontent = newdoc.GetObjects()->GetObject(pageDictionary.GetKey(PdfName::KeyContents)->GetReference());
+              return 1;
+              }}}}}}
+              return 0;
+}
 
-              //Con este bloque podemos ver los nombres de las keys de un diccionario
-              auto content_keys = r8->GetDictionary().GetKeys();
-              for (TCIKeyMap key = content_keys.begin();key!=content_keys.end();++key)
-              {std::cout << key->first.GetEscapedName() << ": ";
-               std::cout << key->second->GetDataTypeString() << std::endl;}
-              
 
-              //painter.DrawXObject(0,0,&a,10,10);
-              
-            }
-            }
-            
-        //Hay que poner un if que chekee que r.first empiece por "EmbeddedPdfPage"
-        //r.second es el objeto a partir del que creamos las páginas nuevas.
-          }
-        }
+
+
+
+int deembed( const char* openFilename ,const char* saveFilename) {
+    /* pdzFilename es el archivo que se va a abrir*/
+    PdfMemDocument document( openFilename );
+    
+    int total_pages = document.GetPageCount();
+    int newpage_number = 0;
+    for (int i=0;i<total_pages;i++){
+      newpage_number = newpage_number + cleanpage(document.GetPage(i),&document);
     }
+    std::cout << "New pages: " << newpage_number << std::endl;
+    if (newpage_number==0){
+      return 1;
     }
-    //painter.FinishPage();
- 
-    document.Write("/home/yomismo/Projects/PDFU-CPP/tests/testpdf/write.pdf");
-
+    document.DeletePages(0,total_pages);
+    document.Write( saveFilename );
+    return 0;
 
 }
 
 int main( int argc, char* argv[] ) {
     try {
-         deembed("/home/yomismo/Projects/PDFU-CPP/tests/testpdf/test.pdf","/home/yomismo/Projects/PDFU-CPP/tests/testpdf/unembedded.pdf");
+         if (deembed("/home/yomismo/Projects/PDFU-CPP/tests/testpdf/test.pdf","/home/yomismo/Projects/PDFU-CPP/tests/testpdf/write.pdf")==0){
+           std::cout << "Limpiado correctamente" << std::endl;
+         }else{
+           std::cout << "No se han encontrado páginas insertadas" << std::endl;
+         };
     } catch( const PdfError & eCode ) {
         eCode.PrintErrorMsg();
         return eCode.GetError();

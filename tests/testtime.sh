@@ -1,11 +1,11 @@
 timearray=()
-for i in {1..20}
+for i in {1..100}
 do
     exec 3>&1 4>&2
-    time=$(LC_NUMERIC=C;TIMEFORMAT="%R"; { time ../build/PDFU-CPP 1>&3 2>&4; } 2>&1)
+    time=$(LC_NUMERIC=C;TIMEFORMAT="%R"; { time ../build/PDFU-CPP multiplepdf/BMPITemario.pdf 1>&3 2>&4; } 2>&1)
     exec 3>&- 4>&-
     timearray+=($time)
-    sleep 1
+    #sleep 1
 done
 
 
@@ -15,5 +15,5 @@ do
      sum=$(echo $sum + $value | bc -l)
 done
 
-media=$(echo $sum / 20 | bc -l)
+media=$(echo $sum / 100 | bc -l)
 echo "Tiempo medio: $media"

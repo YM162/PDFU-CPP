@@ -63,45 +63,54 @@ int cleanpage(PdfPage* page,PdfMemDocument* document){
               return 0;
 }
 
-
-
-
-
 int deembed( const char* openFilename ,const char* saveFilename) {
     /* pdzFilename es el archivo que se va a abrir*/
     PdfMemDocument document( openFilename );
     
     int total_pages = document.GetPageCount();
-    std::cout << "Old pages: " << total_pages << std::endl;
     int newpage_number = 0;
     for (int i;i<total_pages;i++){
       newpage_number = newpage_number + cleanpage(document.GetPage(i),&document);
     }
-    std::cout << "New pages: " << newpage_number << std::endl;
     if (newpage_number==0){
       return 1;
     }
     document.DeletePages(0,total_pages);
+    auto start = std::chrono::high_resolution_clock::now();
+    
     document.Write( saveFilename );
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    double display= (double)duration.count()/(double)1000;
+    std::cout << "Time used writing: " << display << " ms" << std::endl;
+    
     return 0;
 
 }
 
 int main( int argc, char* argv[] ) {
+    auto start = std::chrono::high_resolution_clock::now();
+    std::cout<<argc<<std::endl;
+    if (argc!=2){std::cout<<"Use 1 argument for pdf path."<<std::endl;return 1;};
+
+    std::string load = argv[1];
+    std::string save = load.substr(0, load.size()-4) + "write.pdf";
+
     try {
-         auto start = std::chrono::high_resolution_clock::now();
-         //Por alguna razón si el archivo es muy grande, falla
-         if (deembed("/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/alexromeral_Bloque_2.pdf","/home/yomismo/Projects/PDFU-CPP/tests/multiplepdf/write.pdf")==0){
+         if (deembed(load.c_str(),save.c_str())==0){
            std::cout << "Limpiado correctamente" << std::endl;
          }else{
            std::cout << "No se han encontrado páginas insertadas" << std::endl;
          };
-         auto stop = std::chrono::high_resolution_clock::now();
-         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-         double display= (double)duration.count()/(double)1000;
-         std::cout << "Time taken: " << display << " ms" << std::endl;
     } catch( const PdfError & eCode ) {
         eCode.PrintErrorMsg();
         return eCode.GetError();
     }
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
+    double display= (double)duration.count()/(double)1000;
+    std::cout << "Time used total: " << display << " ms" << std::endl;
+    
 }
